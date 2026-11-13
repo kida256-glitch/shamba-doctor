@@ -23,7 +23,8 @@ Built at **Hack Days Kampala (MLH), MUBS — Best Use of the Google Gemini API**
 | **Multilingual reasoning**: speech transcribed and translated to English; answers written back in the farmer's language | `systemInstruction()` |
 | **Native text-to-speech** reads the advice aloud for low-literacy users | `lib/gemini.js` → `speak()` |
 | **Multi-turn chat** keeps the photos and tool results in context, and can re-check the weather | `/api/chat` |
-| **Automatic model fallback**: tries newer Flash models, then older ones | `TEXT_MODELS` in `lib/gemini.js` |
+| **Fast & resilient**: Flash-Lite with low thinking (~8 s per diagnosis); if a model is busy (503) or slow, a backup model is raced in parallel and the first answer wins | `generate()` in `lib/gemini.js` |
+| **Live progress**: the diagnosis streams each agent step (tool call, weather result, backup model) to the UI as it happens | `/api/diagnose` (NDJSON) |
 
 ## Run it (Windows, macOS or Linux)
 

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { runAgent, parseJSON, speak, geminiReady, activeModels } from './lib/gemini.js';
+import { runAgent, parseJSON, speak, geminiReady, activeModels, isTransient } from './lib/gemini.js';
 import { systemInstruction, diagnosisSchema, chatInstruction, LANGUAGES } from './lib/prompts.js';
 import { mockDiagnosis } from './lib/mock.js';
 import { getWeatherForecast } from './lib/weather.js';
@@ -26,18 +26,30 @@ const sessions = new Map(); // caseId -> { contents, lang, gps, location }
 
 app.get('/api/status', (_req, res) => res.json({ mock: MOCK, models: activeModels(), languages: LANGUAGES }));
 
+// Streams newline-delimited JSON so the UI can show each step live:
+// {type:'thinking'|'backup'|'note'|'tool_call'|'tool_result'} … then {type:'result', …} or {type:'error', …}
 app.post('/api/diagnose', async (req, res) => {
   const { images = [], audio, text = '', lang = 'en', location = 'Kampala', gps, crop = '' } = req.body || {};
   const langName = LANGUAGES[lang] || 'English';
   const trace = [];
   const started = Date.now();
+  if (!images.length && !audio && !text) return res.status(400).json({ error: 'Send at least a photo, a voice note or a question.' });
+
+  res.set({ 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' });
+  res.flushHeaders();
+  const emit = ev => { if (!res.writableEnded) res.write(JSON.stringify({ ...ev, t: Date.now() - started }) + '\n'); };
+  emit({ type: 'start', images: images.length, audio: !!audio?.data });
+
   try {
-    if (!images.length && !audio && !text) return res.status(400).json({ error: 'Send at least a photo, a voice note or a question.' });
+    // Start the forecast now, in parallel with Gemini looking at the photos.
+    const weatherPromise = getWeatherForecast(gps ? { location, lat: gps.lat, lon: gps.lon } : { location });
+    weatherPromise.catch(() => {});
 
     let result, weather, model = 'mock';
     if (MOCK) {
       const m = await mockDiagnosis({ location, gps });
-      result = m.result; weather = m.weather; trace.push(...m.trace);
+      result = m.result; weather = m.weather;
+      for (const ev of m.trace) { trace.push(ev); emit(ev); }
     } else {
       const parts = [];
       images.slice(0, 4).forEach((img, i) => {
@@ -59,7 +71,7 @@ app.post('/api/diagnose', async (req, res) => {
         ].filter(Boolean).join('\n'),
       });
       const contents = [{ role: 'user', parts }];
-      const out = await runAgent({ contents, system: systemInstruction(langName), schema: diagnosisSchema, gps, trace });
+      const out = await runAgent({ contents, system: systemInstruction(langName), schema: diagnosisSchema, gps, trace, emit, weatherPromise });
       result = parseJSON(out.text);
       weather = out.weather;
       model = out.model;
@@ -78,11 +90,12 @@ app.post('/api/diagnose', async (req, res) => {
     });
     saveCases(cases.slice(0, 500));
 
-    res.json({ caseId, result, weather, trace, model, mock: MOCK, ms: Date.now() - started });
+    emit({ type: 'result', caseId, result, weather, trace, model, mock: MOCK, ms: Date.now() - started });
   } catch (e) {
     console.error(e);
-    res.status(e?.status === 429 ? 429 : 500).json({ error: friendlyError(e), trace });
+    emit({ type: 'error', error: friendlyError(e), retryable: isTransient(e), trace });
   }
+  res.end();
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -150,6 +163,8 @@ app.delete('/api/cases/sample', (_req, res) => { saveCases(loadCases().filter(c 
 
 function friendlyError(e) {
   const m = String(e?.message || e);
+  if (e?.status === 503 || /UNAVAILABLE|high demand|overloaded/i.test(m)) return 'Gemini is very busy right now. We tried several models. Please tap Try again in a few seconds.';
+  if (e?.name === 'TimeoutError' || e?.name === 'AbortError' || /took too long/i.test(m)) return 'Gemini took too long to answer. Please tap Try again.';
   if (e?.status === 429 || /quota|rate/i.test(m)) return 'Gemini rate limit hit — wait a few seconds and try again.';
   if (/API key|PERMISSION_DENIED|401|403/i.test(m)) return 'Gemini API key problem — check GEMINI_API_KEY in .env.';
   return m.slice(0, 300);

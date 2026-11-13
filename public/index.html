@@ -3,78 +3,118 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#173a24" />
+  <meta name="theme-color" content="#070708" />
   <title>Shamba Doctor — look first, spray second</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M6 26C6 13 15 6 27 5c0 12-7 21-20 21z' fill='%232f7d45'/><path d='M7 25C12 19 17 14 24 9' stroke='%23f7f3ea' stroke-width='2' fill='none'/></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23070708'/><path d='M7 25C7 13 15 7 26 6c0 11-7 19-19 19z' fill='%23d4af37'/><path d='M8 24C12 19 17 14 23 10' stroke='%23070708' stroke-width='2' fill='none'/></svg>" />
 </head>
 <body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
   <header class="top">
     <div class="brand">
-      <svg viewBox="0 0 32 32" class="logo" aria-hidden="true"><path d="M6 26C6 13 15 6 27 5c0 12-7 21-20 21z" fill="#8fd18f"/><path d="M7 25C12 19 17 14 24 9" stroke="#173a24" stroke-width="2" fill="none"/></svg>
+      <svg viewBox="0 0 40 40" class="logo" aria-hidden="true">
+        <defs>
+          <linearGradient id="lg-gold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f6e27a"/><stop offset=".45" stop-color="#d4af37"/><stop offset="1" stop-color="#9c7a1c"/>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="38" height="38" rx="11" fill="#111113" stroke="url(#lg-gold)" stroke-width="1.2"/>
+        <path d="M9 31C9 17 18 9 31 8c0 13-8 23-22 23z" fill="url(#lg-gold)"/>
+        <path d="M10 30C15 24 20 18 27 13" stroke="#111113" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      </svg>
       <div>
-        <h1>Shamba Doctor</h1>
+        <h1>Shamba <span class="gold-text">Doctor</span></h1>
         <p class="tag">Look first. Spray second.</p>
       </div>
     </div>
-    <span id="modePill" class="pill">…</span>
+    <span id="modePill" class="pill"><i class="dot"></i><span>connecting…</span></span>
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-tab="diagnose" role="tab">Diagnose</button>
-    <button class="tab" data-tab="radar" role="tab">Outbreak radar</button>
+    <span class="tab-ink" aria-hidden="true"></span>
+    <button class="tab active" data-tab="diagnose" role="tab" aria-selected="true">
+      <svg viewBox="0 0 24 24"><path d="M5 20C5 10 12 4 20 4c0 9-6 16-15 16z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 19c4-5 7-8 11-11" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      Diagnose
+    </button>
+    <button class="tab" data-tab="radar" role="tab" aria-selected="false">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 12l6-6" stroke="currentColor" stroke-width="1.8"/></svg>
+      Outbreak radar
+    </button>
   </nav>
 
   <main>
     <!-- ================= DIAGNOSE ================= -->
     <section id="tab-diagnose" class="panel active">
-      <form id="intake" class="card intake" autocomplete="off">
-        <div class="step">
+      <div class="intro reveal">
+        <h2>Your crop doctor, <span class="gold-text">in your language.</span></h2>
+        <p>Snap the sick plant, say what's wrong. Gemini diagnoses it, checks the live weather and tells you exactly what to do, and when it's safe to spray.</p>
+        <div class="intro-stats">
+          <span><b>7</b> languages</span>
+          <span><b>Live</b> weather</span>
+          <span><b>~8s</b> answer</span>
+        </div>
+      </div>
+
+      <form id="intake" class="card intake reveal" autocomplete="off">
+        <div class="step" data-step="1">
           <span class="num">1</span>
           <div class="grow">
-            <h2>Show me the plant</h2>
-            <p class="hint">Close-up of the sick leaf (top &amp; underside) + one photo of the whole plant.</p>
-            <div id="thumbs" class="thumbs">
-              <label class="add-photo">
-                <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden />
-                <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-                <span>Add photo</span>
-              </label>
-            </div>
+            <h3>Show me the plant</h3>
+            <p class="hint">A close-up of the sick leaf (top and underside), plus one of the whole plant. Up to 4 photos.</p>
+            <label id="dropzone" class="dropzone">
+              <input id="photoInput" type="file" accept="image/*" multiple hidden />
+              <span class="dz-icon">
+                <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              </span>
+              <span class="dz-text"><b>Tap to take or choose photos</b><small>or drag &amp; drop, or paste an image</small></span>
+            </label>
+            <div id="thumbs" class="thumbs"></div>
           </div>
         </div>
 
-        <div class="step">
+        <div class="step" data-step="2">
           <span class="num">2</span>
           <div class="grow">
-            <h2>Tell me what's wrong</h2>
-            <p class="hint">Speak in your own language — or type.</p>
+            <h3>Tell me what's wrong</h3>
+            <p class="hint">Speak in your own language, or type.</p>
             <div class="voice-row">
               <button type="button" id="micBtn" class="mic" aria-pressed="false">
-                <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
-                <span id="micLabel">Record voice note</span>
+                <span class="mic-ring"></span>
+                <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
               </button>
+              <div class="mic-info">
+                <span id="micLabel">Record a voice note</span>
+                <div class="wave" id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
               <audio id="voicePreview" controls hidden></audio>
             </div>
             <textarea id="textInput" rows="2" placeholder="e.g. Leaves have holes and something like sawdust in the middle. Started last week."></textarea>
+            <div class="chips quick" id="quickChips">
+              <button type="button" class="chip" data-text="Leaves have holes and sawdust-like frass in the funnel. Started last week." data-crop="Maize">🌽 Holes in maize</button>
+              <button type="button" class="chip" data-text="Cassava leaves are yellow and twisted with a mosaic pattern." data-crop="Cassava">🍃 Yellow cassava</button>
+              <button type="button" class="chip" data-text="Banana leaves are wilting and turning yellow; bunches ripen too early and the inside is brown." data-crop="Banana">🍌 Wilting banana</button>
+              <button type="button" class="chip" data-text="Dark brown patches with pale edges on tomato leaves after the rains." data-crop="Tomato">🍅 Tomato blight?</button>
+            </div>
           </div>
         </div>
 
-        <div class="step">
+        <div class="step" data-step="3">
           <span class="num">3</span>
           <div class="grow">
-            <h2>Where &amp; which language?</h2>
+            <h3>Where &amp; which language?</h3>
             <div class="row">
               <label class="field grow">
                 <span>District / town</span>
                 <input id="location" list="districts" value="Mbale" />
               </label>
-              <button type="button" id="gpsBtn" class="ghost small" title="Use my GPS">
+              <button type="button" id="gpsBtn" class="ghost small gps" title="Use my GPS">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3" stroke="currentColor" stroke-width="1.6"/></svg>
-                GPS
+                <span>GPS</span>
               </button>
             </div>
             <datalist id="districts">
@@ -84,45 +124,69 @@
               <option>Fort Portal</option><option>Iganga</option><option>Luwero</option><option>Masindi</option><option>Tororo</option>
               <option>Kapchorwa</option><option>Bushenyi</option>
             </datalist>
-            <div class="row">
-              <label class="field grow">
-                <span>Answer me in</span>
-                <select id="lang"></select>
-              </label>
-              <label class="field grow">
-                <span>Crop (optional)</span>
-                <input id="crop" placeholder="maize, cassava, matooke…" />
-              </label>
+
+            <span class="label">Answer me in</span>
+            <div class="seg" id="langSeg" role="radiogroup" aria-label="Language"></div>
+
+            <label class="field">
+              <span>Crop (optional)</span>
+              <input id="crop" placeholder="maize, cassava, matooke…" />
+            </label>
+            <div class="chips" id="cropChips">
+              <button type="button" class="chip sm">Maize</button><button type="button" class="chip sm">Cassava</button>
+              <button type="button" class="chip sm">Banana</button><button type="button" class="chip sm">Beans</button>
+              <button type="button" class="chip sm">Coffee</button><button type="button" class="chip sm">Tomato</button>
+              <button type="button" class="chip sm">Irish potato</button>
             </div>
           </div>
         </div>
 
         <button id="goBtn" class="primary big" type="submit">
           <span>Diagnose my crop</span>
-          <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </form>
 
       <div id="thinking" class="card thinking" hidden>
-        <div class="pulse-leaf"></div>
-        <ol id="thinkSteps">
-          <li data-s="0">Looking closely at your photos</li>
-          <li data-s="1">Listening to your voice note</li>
-          <li data-s="2">Checking live weather for a safe spray time</li>
-          <li data-s="3">Writing your action plan</li>
-        </ol>
+        <div class="scan" id="scanBox">
+          <div class="scan-ph">
+            <svg viewBox="0 0 40 40"><path d="M9 31C9 17 18 9 31 8c0 13-8 23-22 23z" fill="url(#lg-gold)"/></svg>
+          </div>
+          <span class="scan-line"></span>
+        </div>
+        <div class="think-body">
+          <div class="think-head">
+            <h3>Gemini is working</h3>
+            <span class="timer" id="timer">0.0s</span>
+          </div>
+          <ol id="thinkSteps" class="steps-live">
+            <li data-k="look"><i></i><span class="lbl">Examining your photos</span><small></small></li>
+            <li data-k="listen"><i></i><span class="lbl">Listening to your voice note</span><small></small></li>
+            <li data-k="weather"><i></i><span class="lbl">Checking live weather</span><small></small></li>
+            <li data-k="plan"><i></i><span class="lbl">Writing your action plan</span><small></small></li>
+          </ol>
+          <p class="think-note" id="thinkNote"></p>
+        </div>
       </div>
 
-      <div id="error" class="card error" hidden></div>
+      <div id="error" class="card error" hidden>
+        <div class="err-icon">!</div>
+        <div class="grow">
+          <h3>Something went wrong</h3>
+          <p id="errorText"></p>
+        </div>
+        <button type="button" id="retryBtn" class="primary small" hidden>Try again</button>
+      </div>
+
       <div id="results" hidden></div>
     </section>
 
     <!-- ================= RADAR ================= -->
     <section id="tab-radar" class="panel">
       <div class="card">
-        <div class="row between">
+        <div class="row between wrap">
           <div>
-            <h2>Outbreak radar</h2>
+            <h2 class="h2">Outbreak <span class="gold-text">radar</span></h2>
             <p class="hint">Every diagnosis becomes an early-warning signal for extension officers.</p>
           </div>
           <div class="row tight">
@@ -130,14 +194,21 @@
             <button id="clearSampleBtn" class="ghost small">Clear samples</button>
           </div>
         </div>
+        <div class="stats" id="radarStats"></div>
         <div id="alerts"></div>
         <div id="map"></div>
+        <div class="filter-row" id="radarFilter"></div>
         <div id="caseList" class="case-list"></div>
       </div>
     </section>
   </main>
 
-  <footer class="foot">Built at Hack Days Kampala · Powered by the Google Gemini API · Advice is guidance — always read the product label and consult your extension officer.</footer>
+  <footer class="foot">
+    <span>Built at Hack Days Kampala · Powered by the <b>Google Gemini API</b></span>
+    <span>Advice is guidance. Always read the product label and consult your extension officer.</span>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="app.js" type="module"></script>
