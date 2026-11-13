@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#173a24" />
+  <title>Shamba Doctor — look first, spray second</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M6 26C6 13 15 6 27 5c0 12-7 21-20 21z' fill='%232f7d45'/><path d='M7 25C12 19 17 14 24 9' stroke='%23f7f3ea' stroke-width='2' fill='none'/></svg>" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" class="logo" aria-hidden="true"><path d="M6 26C6 13 15 6 27 5c0 12-7 21-20 21z" fill="#8fd18f"/><path d="M7 25C12 19 17 14 24 9" stroke="#173a24" stroke-width="2" fill="none"/></svg>
+      <div>
+        <h1>Shamba Doctor</h1>
+        <p class="tag">Look first. Spray second.</p>
+      </div>
+    </div>
+    <span id="modePill" class="pill">…</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="diagnose" role="tab">Diagnose</button>
+    <button class="tab" data-tab="radar" role="tab">Outbreak radar</button>
+  </nav>
+
+  <main>
+    <!-- ================= DIAGNOSE ================= -->
+    <section id="tab-diagnose" class="panel active">
+      <form id="intake" class="card intake" autocomplete="off">
+        <div class="step">
+          <span class="num">1</span>
+          <div class="grow">
+            <h2>Show me the plant</h2>
+            <p class="hint">Close-up of the sick leaf (top &amp; underside) + one photo of the whole plant.</p>
+            <div id="thumbs" class="thumbs">
+              <label class="add-photo">
+                <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden />
+                <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+                <span>Add photo</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="num">2</span>
+          <div class="grow">
+            <h2>Tell me what's wrong</h2>
+            <p class="hint">Speak in your own language — or type.</p>
+            <div class="voice-row">
+              <button type="button" id="micBtn" class="mic" aria-pressed="false">
+                <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+                <span id="micLabel">Record voice note</span>
+              </button>
+              <audio id="voicePreview" controls hidden></audio>
+            </div>
+            <textarea id="textInput" rows="2" placeholder="e.g. Leaves have holes and something like sawdust in the middle. Started last week."></textarea>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="num">3</span>
+          <div class="grow">
+            <h2>Where &amp; which language?</h2>
+            <div class="row">
+              <label class="field grow">
+                <span>District / town</span>
+                <input id="location" list="districts" value="Mbale" />
+              </label>
+              <button type="button" id="gpsBtn" class="ghost small" title="Use my GPS">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3" stroke="currentColor" stroke-width="1.6"/></svg>
+                GPS
+              </button>
+            </div>
+            <datalist id="districts">
+              <option>Kampala</option><option>Wakiso</option><option>Mukono</option><option>Mbale</option><option>Sironko</option>
+              <option>Gulu</option><option>Lira</option><option>Mbarara</option><option>Masaka</option><option>Jinja</option>
+              <option>Kasese</option><option>Hoima</option><option>Arua</option><option>Soroti</option><option>Kabale</option>
+              <option>Fort Portal</option><option>Iganga</option><option>Luwero</option><option>Masindi</option><option>Tororo</option>
+              <option>Kapchorwa</option><option>Bushenyi</option>
+            </datalist>
+            <div class="row">
+              <label class="field grow">
+                <span>Answer me in</span>
+                <select id="lang"></select>
+              </label>
+              <label class="field grow">
+                <span>Crop (optional)</span>
+                <input id="crop" placeholder="maize, cassava, matooke…" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <button id="goBtn" class="primary big" type="submit">
+          <span>Diagnose my crop</span>
+          <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+        </button>
+      </form>
+
+      <div id="thinking" class="card thinking" hidden>
+        <div class="pulse-leaf"></div>
+        <ol id="thinkSteps">
+          <li data-s="0">Looking closely at your photos</li>
+          <li data-s="1">Listening to your voice note</li>
+          <li data-s="2">Checking live weather for a safe spray time</li>
+          <li data-s="3">Writing your action plan</li>
+        </ol>
+      </div>
+
+      <div id="error" class="card error" hidden></div>
+      <div id="results" hidden></div>
+    </section>
+
+    <!-- ================= RADAR ================= -->
+    <section id="tab-radar" class="panel">
+      <div class="card">
+        <div class="row between">
+          <div>
+            <h2>Outbreak radar</h2>
+            <p class="hint">Every diagnosis becomes an early-warning signal for extension officers.</p>
+          </div>
+          <div class="row tight">
+            <button id="sampleBtn" class="ghost small">Load sample reports</button>
+            <button id="clearSampleBtn" class="ghost small">Clear samples</button>
+          </div>
+        </div>
+        <div id="alerts"></div>
+        <div id="map"></div>
+        <div id="caseList" class="case-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">Built at Hack Days Kampala · Powered by the Google Gemini API · Advice is guidance — always read the product label and consult your extension officer.</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "shamba-doctor",
+  "version": "1.0.0",
+  "description": "Shamba Doctor - Gemini-powered crop doctor for Ugandan smallholder farmers",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "mock": "node server.js --mock"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^3.3.0",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0"
+  },
+  "type": "module"
+}
