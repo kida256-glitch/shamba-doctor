@@ -4,6 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#070708" />
+  <script>
+    // Apply the saved theme before first paint (dark is the default look).
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('sd-theme'); } catch (e) {}
+      document.documentElement.dataset.theme = t === 'light' ? 'light' : 'dark';
+    })();
+  </script>
   <title>Shamba Doctor — look first, spray second</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,7 +40,13 @@
         <p class="tag">Look first. Spray second.</p>
       </div>
     </div>
-    <span id="modePill" class="pill"><i class="dot"></i><span>connecting…</span></span>
+    <div class="head-right">
+      <span id="modePill" class="pill"><i class="dot"></i><span>connecting…</span></span>
+      <button type="button" id="themeBtn" class="theme-btn" aria-label="Switch to light mode" title="Light / dark mode">
+        <svg class="moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="currentColor"/></svg>
+        <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
   </header>
 
   <nav class="tabs" role="tablist">

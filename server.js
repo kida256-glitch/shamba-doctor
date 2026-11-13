@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { runAgent, parseJSON, speak, geminiReady, activeModels, isTransient } from './lib/gemini.js';
 import { systemInstruction, diagnosisSchema, chatInstruction, LANGUAGES } from './lib/prompts.js';
@@ -12,16 +13,17 @@ import { getWeatherForecast } from './lib/weather.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MOCK = process.argv.includes('--mock') || process.env.MOCK === '1' || !geminiReady();
 const PORT = Number(process.env.PORT || 3000);
-const CASES_FILE = path.join(__dirname, 'data', 'cases.json');
+// Vercel's filesystem is read-only except /tmp (ephemeral, per instance) — fine for a demo radar.
+const CASES_FILE = process.env.VERCEL ? path.join(os.tmpdir(), 'cases.json') : path.join(__dirname, 'data', 'cases.json');
 
 const app = express();
 app.use(express.json({ limit: '30mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ---- tiny persistence for the outbreak radar ----
-fs.mkdirSync(path.dirname(CASES_FILE), { recursive: true });
+try { fs.mkdirSync(path.dirname(CASES_FILE), { recursive: true }); } catch { /* read-only FS */ }
 const loadCases = () => { try { return JSON.parse(fs.readFileSync(CASES_FILE, 'utf8')); } catch { return []; } };
-const saveCases = c => fs.writeFileSync(CASES_FILE, JSON.stringify(c, null, 2));
+const saveCases = c => { try { fs.writeFileSync(CASES_FILE, JSON.stringify(c, null, 2)); } catch (e) { console.warn('[cases] not saved:', e.message); } };
 const sessions = new Map(); // caseId -> { contents, lang, gps, location }
 
 app.get('/api/status', (_req, res) => res.json({ mock: MOCK, models: activeModels(), languages: LANGUAGES }));
@@ -99,8 +101,20 @@ app.post('/api/diagnose', async (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-  const { caseId, message } = req.body || {};
-  const s = sessions.get(caseId);
+  const { caseId, message, context } = req.body || {};
+  let s = sessions.get(caseId);
+  // Serverless: this request may hit an instance that never saw the diagnosis. Rebuild the case
+  // from the result the browser sends back (no photos, but the full diagnosis and location).
+  if (!s && !MOCK && context?.result) {
+    s = {
+      contents: [
+        { role: 'user', parts: [{ text: `Farm location: ${context.location || 'Uganda'}. Here is the diagnosis you gave this farmer earlier:\n${JSON.stringify(context.result).slice(0, 12000)}` }] },
+        { role: 'model', parts: [{ text: 'Understood. I will answer follow-up questions about this case.' }] },
+      ],
+      lang: context.lang || 'en', gps: context.gps || null, location: context.location,
+    };
+    sessions.set(caseId || crypto.randomUUID(), s);
+  }
   if (MOCK || !s) {
     return res.json({ reply: MOCK
       ? '(Demo mode) Spray only in the cool morning window shown above, into the funnel, and wear gloves and a mask. Check again after 3 days.'
@@ -170,7 +184,12 @@ function friendlyError(e) {
   return m.slice(0, 300);
 }
 
-app.listen(PORT, () => {
-  console.log(`\n🌱 Shamba Doctor running → http://localhost:${PORT}`);
-  console.log(MOCK ? '   MODE: DEMO/MOCK (no Gemini key or --mock flag)\n' : `   MODE: LIVE Gemini · trying ${activeModels().text}\n`);
-});
+// On Vercel the app is exported as a serverless function; locally it listens on PORT.
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n🌱 Shamba Doctor running → http://localhost:${PORT}`);
+    console.log(MOCK ? '   MODE: DEMO/MOCK (no Gemini key or --mock flag)\n' : `   MODE: LIVE Gemini · trying ${activeModels().text}\n`);
+  });
+}
+
+export default app;

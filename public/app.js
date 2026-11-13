@@ -24,6 +24,19 @@ const state = { images: [], audio: null, gps: null, caseId: null, lang: 'lg', st
   markSteps();
 })();
 
+// ---------- light / dark theme ----------
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name="theme-color"]').content = t === 'light' ? '#f4f3ef' : '#070708';
+  $('#themeBtn').setAttribute('aria-label', t === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+}
+applyTheme(document.documentElement.dataset.theme || 'dark');
+$('#themeBtn').onclick = () => {
+  const t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  applyTheme(t);
+  try { localStorage.setItem('sd-theme', t); } catch { /* private mode: theme just won't persist */ }
+};
+
 // ---------- tabs with sliding indicator ----------
 $$('.tab').forEach(t => t.addEventListener('click', () => {
   $$('.tab').forEach(x => { x.classList.toggle('active', x === t); x.setAttribute('aria-selected', String(x === t)); });
@@ -126,7 +139,7 @@ $('#micBtn').addEventListener('click', async () => {
     recTimer = setInterval(() => {
       const s = Math.floor((Date.now() - recStart) / 1000);
       $('#micLabel').textContent = `Recording… ${s}s · tap to stop`;
-      if (s >= 60) rec.stop();
+      if (s >= 45) rec.stop(); // keeps the upload under Vercel's 4.5 MB request limit
     }, 250);
   } catch (e) {
     showError(location.protocol === 'https:' || location.hostname === 'localhost'
@@ -216,6 +229,8 @@ async function diagnose(body) {
     if (!final) throw Object.assign(new Error('The connection closed before Gemini finished. Please try again.'), { retryable: true });
     prog.finish();
     state.caseId = final.caseId;
+    // Sent back with follow-up questions so any server instance can answer them.
+    state.chatContext = { result: final.result, location: final.weather?.location || body.location, gps: body.gps, lang: body.lang };
     await new Promise(r => setTimeout(r, 350));
     hide('#thinking');
     renderResults(final);
@@ -451,7 +466,7 @@ function timeline(w) {
     <div class="timeline" id="timeline" aria-label="36-hour forecast">${bars}</div>
     <div class="tl-axis">${axis}</div>
     <div class="tl-read" id="tlRead"><span>☀️ <b>${safe}</b> safe spray hour${safe === 1 ? '' : 's'} in the next 36h</span><span>📍 ${esc(w.location)} · ${esc(w.source)}</span></div>
-    <div class="legend"><span><i style="background:var(--gold)"></i>safe to spray</span><span><i style="background:rgba(201,205,211,.3)"></i>not safe</span><span><i style="background:var(--heat)"></i>≥30°C heat</span><span><i style="background:var(--rain);border-radius:50%"></i>rain likely</span></div>
+    <div class="legend"><span><i style="background:var(--gold)"></i>safe to spray</span><span><i style="background:var(--bar-off)"></i>not safe</span><span><i style="background:var(--heat)"></i>≥30°C heat</span><span><i style="background:var(--rain);border-radius:50%"></i>rain likely</span></div>
   </div>`;
 }
 
@@ -520,7 +535,7 @@ async function sendChat(text) {
   pending.className = 'msg bot'; pending.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
   log.append(pending); log.scrollTop = log.scrollHeight;
   try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId: state.caseId, message: msg }) });
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId: state.caseId, message: msg, context: state.chatContext }) });
     const j = await r.json();
     pending.textContent = j.reply || j.error;
     if (j.trace?.some(t => t.type === 'tool_call')) pending.insertAdjacentHTML('afterbegin', '<span class="tool">🔧 checked live weather</span>');

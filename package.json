@@ -2,7 +2,7 @@
   "name": "shamba-doctor",
   "version": "1.0.0",
   "description": "Shamba Doctor - Gemini-powered crop doctor for Ugandan smallholder farmers",
-  "main": "index.js",
+  "main": "server.js",
   "directories": {
     "lib": "lib"
   },
